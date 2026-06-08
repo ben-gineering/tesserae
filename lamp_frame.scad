@@ -4,14 +4,14 @@
 
 // ==================== PARAMETERS ====================
 
-// Overall dimensions
-frame_width = 25;      // Width in cm (x-axis)
-frame_depth = 25;      // Depth in cm (y-axis)
-frame_height = 150;    // Total height in cm (z-axis)
+// Section dimensions
+section_width = 25;      // Width of each section in cm (x-axis)
+section_depth = 25;      // Depth of each section in cm (y-axis)
+section_height = 25;     // Height of each section in cm (z-axis)
 
 // Structure parameters
 num_sections = 6;      // Number of vertical sections
-rod_diameter = 1;    // Rod/tube diameter in cm
+rod_diameter = 2;    // Rod/tube diameter in cm
 corner_offset = 0;     // Offset from corners for aesthetic (0 = centered on corner)
 
 // Bracing pattern
@@ -37,17 +37,16 @@ z_bracing_direction = "forward"; // "forward" (/) or "backward" (\) when viewed 
 
 // ==================== DERIVED VALUES ====================
 
-section_height = frame_height / num_sections;
 half_rod = rod_diameter / 2;
 
 // Corner positions (adjusted for rod centering)
 x_positions = [
-    -frame_width/2 + corner_offset + half_rod,
-    frame_width/2 - corner_offset - half_rod
+    -section_width/2 + corner_offset + half_rod,
+    section_width/2 - corner_offset - half_rod
 ];
 y_positions = [
-    -frame_depth/2 + corner_offset + half_rod,
-    frame_depth/2 - corner_offset - half_rod
+    -section_depth/2 + corner_offset + half_rod,
+    section_depth/2 - corner_offset - half_rod
 ];
 
 // ==================== MODULES ====================
@@ -171,6 +170,7 @@ module spotlight_at(z_center) {
         translate(spotlight_offset)
         rotate(spotlight_rotation)
         scale(spotlight_scale)
+        color("#222222")
         import(spotlight_file);
     }
 }
@@ -196,10 +196,11 @@ module lamp_section(section_idx) {
 
 // Create all four vertical corner posts
 module vertical_posts() {
+    total_height = num_sections * section_height;
     for (x = x_positions) {
         for (y = y_positions) {
             translate([x, y, 0])
-            rod_z(frame_height);
+            rod_z(total_height);
         }
     }
 }
@@ -218,7 +219,7 @@ module lamp_frame() {
             }
             
             // Top ring
-            horizontal_ring(frame_height);
+            horizontal_ring(num_sections * section_height);
         }
         // Optional: cut flat bottom for stability
         // translate([-frame_width, -frame_depth, -1])
@@ -233,5 +234,5 @@ lamp_frame();
 // ==================== REFERENCE CUBE (commented out) ====================
 // Uncomment to show reference grid
 // color("lightgray", 0.3)
-// translate([-frame_width/2, -frame_depth/2, 0])
-// cube([frame_width, frame_depth, frame_height]);
+// translate([-section_width/2, -section_depth/2, 0])
+// cube([section_width, section_depth, num_sections * section_height]);
