@@ -143,31 +143,33 @@ module z_bracing(z_base, section_h) {
 // Create horizontal ring at a given height using BOSL2 axis-aligned cylinders
 module horizontal_ring(z_height) {
     if (enable_horizontal) {
-        // Calculate rod lengths
-        x_len = section_width - 2 * corner_offset - rod_diameter;
-        y_len = section_depth - 2 * corner_offset - rod_diameter;
-        
         // Corner positions for rod endpoints
         fl = [x_positions[0], y_positions[0], z_height];  // front-left
         fr = [x_positions[1], y_positions[0], z_height];  // front-right
         bl = [x_positions[0], y_positions[1], z_height];  // back-left
         br = [x_positions[1], y_positions[1], z_height];  // back-right
         
-        // Front horizontal (along X) - use xcyl for efficiency
-        translate(fl + [0, 0, rod_diameter/2])
-            xcyl(l = x_len, d = rod_diameter, orient = EY, $fn = 16);
+        // Front horizontal (along X) - use xcyl centered between endpoints
+        mid_x_front = (fl + fr) / 2;
+        len_x = norm(fr - fl);
+        translate(mid_x_front)
+            xcyl(l = len_x, d = rod_diameter, $fn = 16);
         
         // Back horizontal (along X)
-        translate(bl + [0, 0, rod_diameter/2])
-            xcyl(l = x_len, d = rod_diameter, orient = EY, $fn = 16);
+        mid_x_back = (bl + br) / 2;
+        translate(mid_x_back)
+            xcyl(l = len_x, d = rod_diameter, $fn = 16);
         
-        // Left horizontal (along Y) - use ycyl for efficiency
-        translate(fl + [0, 0, rod_diameter/2])
-            ycyl(l = y_len, d = rod_diameter, orient = EX, $fn = 16);
+        // Left horizontal (along Y) - use ycyl centered between endpoints
+        mid_y_left = (fl + bl) / 2;
+        len_y = norm(bl - fl);
+        translate(mid_y_left)
+            ycyl(l = len_y, d = rod_diameter, $fn = 16);
         
         // Right horizontal (along Y)
-        translate(fr + [0, 0, rod_diameter/2])
-            ycyl(l = y_len, d = rod_diameter, orient = EX, $fn = 16);
+        mid_y_right = (fr + br) / 2;
+        translate(mid_y_right)
+            ycyl(l = len_y, d = rod_diameter, $fn = 16);
     }
 }
 
@@ -203,11 +205,12 @@ module lamp_section(section_idx) {
 }
 
 // Create all four vertical corner posts using BOSL2 zcyl
+// Use anchor=BOT so cylinder starts at z=0 and extends upward
 module vertical_posts() {
     total_height = num_sections * section_height;
     for (x = x_positions) {
         for (y = y_positions) {
-            translate([x, y, 0])
+            translate([x, y, total_height/2])
                 zcyl(h = total_height, d = rod_diameter, $fn = 16);
         }
     }
