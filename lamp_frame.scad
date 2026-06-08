@@ -1,6 +1,10 @@
 // Parametric Industrial Lamp Frame
 // Based on lattice/truss tower design
 // Only structural rods (no connectors, no lamp fixtures)
+// Uses BOSL2 for enhanced primitives
+
+include <BOSL2/std.scad>
+include <BOSL2/shapes3d.scad>
 
 // ==================== PARAMETERS ====================
 
@@ -51,12 +55,8 @@ y_positions = [
 
 // ==================== MODULES ====================
 
-// Create a single rod along Z axis
-module rod_z(height) {
-    cylinder(h = height, d = rod_diameter, $fn = 16);
-}
-
 // Create a rod from point p1 to point p2 using hull
+// Used for diagonal bracing and arbitrary connections
 module rod_between(p1, p2) {
     hull() {
         translate(p1) sphere(d = rod_diameter, $fn = 16);
@@ -140,26 +140,34 @@ module z_bracing(z_base, section_h) {
     }
 }
 
-// Create horizontal ring at a given height
+// Create horizontal ring at a given height using BOSL2 axis-aligned cylinders
 module horizontal_ring(z_height) {
     if (enable_horizontal) {
-        // Define corner points at this height
-        front_left = [x_positions[0], y_positions[0], z_height];
-        front_right = [x_positions[1], y_positions[0], z_height];
-        back_left = [x_positions[0], y_positions[1], z_height];
-        back_right = [x_positions[1], y_positions[1], z_height];
+        // Calculate rod lengths
+        x_len = section_width - 2 * corner_offset - rod_diameter;
+        y_len = section_depth - 2 * corner_offset - rod_diameter;
         
-        // Front horizontal (along X)
-        rod_between(front_left, front_right);
+        // Corner positions for rod endpoints
+        fl = [x_positions[0], y_positions[0], z_height];  // front-left
+        fr = [x_positions[1], y_positions[0], z_height];  // front-right
+        bl = [x_positions[0], y_positions[1], z_height];  // back-left
+        br = [x_positions[1], y_positions[1], z_height];  // back-right
+        
+        // Front horizontal (along X) - use xcyl for efficiency
+        translate(fl + [0, 0, rod_diameter/2])
+            xcyl(l = x_len, d = rod_diameter, orient = EY, $fn = 16);
         
         // Back horizontal (along X)
-        rod_between(back_left, back_right);
+        translate(bl + [0, 0, rod_diameter/2])
+            xcyl(l = x_len, d = rod_diameter, orient = EY, $fn = 16);
         
-        // Left horizontal (along Y)
-        rod_between(front_left, back_left);
+        // Left horizontal (along Y) - use ycyl for efficiency
+        translate(fl + [0, 0, rod_diameter/2])
+            ycyl(l = y_len, d = rod_diameter, orient = EX, $fn = 16);
         
         // Right horizontal (along Y)
-        rod_between(front_right, back_right);
+        translate(fr + [0, 0, rod_diameter/2])
+            ycyl(l = y_len, d = rod_diameter, orient = EX, $fn = 16);
     }
 }
 
@@ -194,13 +202,13 @@ module lamp_section(section_idx) {
     spotlight_at(z_center);
 }
 
-// Create all four vertical corner posts
+// Create all four vertical corner posts using BOSL2 zcyl
 module vertical_posts() {
     total_height = num_sections * section_height;
     for (x = x_positions) {
         for (y = y_positions) {
             translate([x, y, 0])
-            rod_z(total_height);
+                zcyl(h = total_height, d = rod_diameter, $fn = 16);
         }
     }
 }
