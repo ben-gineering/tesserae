@@ -17,7 +17,9 @@ section_height = 25;     // Height of each section in cm (z-axis)
 num_sections = 6;      // Number of vertical sections
 rod_diameter = 2;    // Rod/tube diameter in cm
 corner_offset = 0;     // Offset from corners for aesthetic (0 = centered on corner)
-rod_connection_offset = 0;  // Rod offset for edge connections: 0=centered, -1=edge align front/left, +1=edge align back/right
+rod_connection_offset = 0;  // Rod offset for edge alignment: 0=centered, ±(rod_diameter/2)=flush edges
+// Each rod offset in axes perpendicular to its own axis:
+//   zcyl (vertical): X and Y | xcyl (X-axis): Y only | ycyl (Y-axis): X only
 
 // Bracing pattern
 enable_x_bracing = false;   // Enable X cross-bracing (two diagonals) in each section
@@ -212,9 +214,10 @@ module lamp_section(section_idx) {
 module vertical_posts() {
     total_height = num_sections * section_height;
     
+    // Vertical posts offset in BOTH X and Y (perpendicular to Z axis)
     for (x = x_positions) {
         for (y = y_positions) {
-            translate([x, y + rod_connection_offset, total_height/2])
+            translate([x + rod_connection_offset, y + rod_connection_offset, total_height/2])
                 zcyl(h = total_height, d = rod_diameter, $fn = 16);
         }
     }
