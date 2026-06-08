@@ -66,6 +66,29 @@ Added flexible bracing configuration:
 - Wrote README.md with full parameter documentation
 - Documented development history (this file)
 
+#### Phase 6: Spotlight Import Integration
+- Downloaded IKEA HEKTAR Wand-Klemmspot 3D model (GLB format)
+- Converted GLB → STL using Blender + Python (trimesh/manual export)
+  - Original: `HEKTAR Wand-Klemmspot - dunkelgrau (80215308)-mini.glb` (237 KB)
+  - Exported: `media/spotlight.stl` (10.5 MB ASCII, 16,658 vertices)
+  - Dimensions: ~10.8 × 22 × 31 cm (real-world scale)
+
+- Added spotlight configuration parameters:
+  - `enable_spotlights`: Toggle on/off
+  - `spotlight_scale`: Size adjustment factor
+  - `spotlight_rotation`: [x, y, z] rotation in degrees
+  - `spotlight_offset`: Additional position offset
+
+- Implemented `spotlight_at(z_center)` module:
+  - Places one instance per section at vertical center
+  - Applies rotation and scaling
+  - Uses OpenSCAD `import()` for STL loading
+
+**Render Notes**:
+- Spotlight visible in OpenSCAD GUI preview and render
+- CLI PNG renders may require colorscheme adjustments for visibility
+- Model is non-manifold (not watertight) but imports correctly
+
 ---
 
 ## Current Status
@@ -75,10 +98,11 @@ Added flexible bracing configuration:
 - Full bracing configuration options (X/Z patterns, per-side control)
 - Clean geometry verified across multiple views
 - Manifold solid suitable for 3D printing/fabrication
+- Imported spotlight model placement in each section
 - Documentation complete
 
 ⏳ **Future Enhancements**:
-- [ ] Lamp fixture/arm attachments (currently excluded per requirements)
+- [ ] Custom spotlight mount/connectors for physical fabrication
 - [ ] Connector/joint designs for physical fabrication
 - [ ] Material thickness calculations for metal tubing
 - [ ] Cable management integration

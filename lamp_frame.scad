@@ -7,10 +7,10 @@
 // Overall dimensions
 frame_width = 25;      // Width in cm (x-axis)
 frame_depth = 25;      // Depth in cm (y-axis)
-frame_height = 50;    // Total height in cm (z-axis)
+frame_height = 150;    // Total height in cm (z-axis)
 
 // Structure parameters
-num_sections = 2;      // Number of vertical sections
+num_sections = 6;      // Number of vertical sections
 rod_diameter = 1;    // Rod/tube diameter in cm
 corner_offset = 0;     // Offset from corners for aesthetic (0 = centered on corner)
 
@@ -22,8 +22,9 @@ enable_horizontal = true;  // Enable horizontal rings at each section
 // Spotlight configuration
 enable_spotlights = true;  // Enable imported spotlight models
 spotlight_file = "media/spotlight.stl";  // Path to imported 3D model
-spotlight_scale = 1.0;  // Scale factor for spotlight (1 = original size)
-spotlight_rotation = [0, 90, 0];  // Rotation [x, y, z] degrees to orient spotlight
+spotlight_scale = 1.0;  // Scale factor (model already in cm: ~11x22x31 cm)
+spotlight_rotation = [90, 45, 0];  // Rotation [x, y, z] degrees
+spotlight_offset = [4, 19, 3];  // Additional offset from section center
 
 // Per-side bracing control (applies to both X and Z bracing)
 bracing_front = false;   // Front face (y = min)
@@ -167,6 +168,7 @@ module horizontal_ring(z_height) {
 module spotlight_at(z_center) {
     if (enable_spotlights) {
         translate([0, 0, z_center])
+        translate(spotlight_offset)
         rotate(spotlight_rotation)
         scale(spotlight_scale)
         import(spotlight_file);

@@ -14,6 +14,7 @@ A parametric industrial floor lamp frame inspired by lattice/truss tower structu
 - **Parametric design**: All dimensions adjustable via variables
 - **Modular construction**: Repeating sections stacked vertically
 - **Flexible bracing**: Choose X-pattern, Z-pattern, or no bracing per side
+- **Integrated spotlights**: Import and place 3D models in each section
 
 ## Parameters
 
@@ -44,6 +45,16 @@ A parametric industrial floor lamp frame inspired by lattice/truss tower structu
 | `bracing_left` | `true` | Enable bracing on left face |
 | `bracing_right` | `true` | Enable bracing on right face |
 | `z_bracing_direction` | `"forward"` | Diagonal direction: `"forward"` (/) or `"backward"` (\) |
+
+### Spotlight Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `enable_spotlights` | `true` | Enable imported spotlight models |
+| `spotlight_file` | `"media/spotlight.stl"` | Path to imported 3D model |
+| `spotlight_scale` | `1.0` | Scale factor for spotlight size |
+| `spotlight_rotation` | `[0, 0, 0]` | Rotation [x, y, z] in degrees |
+| `spotlight_offset` | `[0, 0, 0]` | Additional offset from section center |
 
 ## Usage
 
@@ -80,6 +91,11 @@ bracing_front = true;
 bracing_back = false;
 bracing_left = true;
 bracing_right = false;
+
+// With custom spotlight orientation
+enable_spotlights = true;
+spotlight_scale = 1.5;
+spotlight_rotation = [-90, 0, 0];  // Point forward
 ```
 
 ## Files
