@@ -17,7 +17,7 @@ section_height = 25;     // Height of each section in cm (z-axis)
 num_sections = 6;      // Number of vertical sections
 rod_diameter = 2;    // Rod/tube diameter in cm
 corner_offset = 0;     // Offset from corners for aesthetic (0 = centered on corner)
-rod_connection_offset = 0;  // Rod offset for edge alignment: 0=centered, ±(rod_diameter/2)=flush edges
+rod_connection_offset = rod_diameter;  // Rod offset for edge alignment: 0=centered, ±(rod_diameter/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
 //   zcyl (vertical): X and Y | xcyl (X-axis): Y only | ycyl (Y-axis): X only
 
@@ -156,24 +156,24 @@ module horizontal_ring(z_height) {
         // Apply rod_connection_offset in -Y direction
         mid_x_front = (fl + fr) / 2;
         len_x = norm(fr - fl);
-        translate(mid_x_front + [0, rod_connection_offset, 0])
+        translate(mid_x_front + [0, 0, -rod_connection_offset])
             xcyl(l = len_x, d = rod_diameter, $fn = 16);
         
         // Back horizontal (along X)
         mid_x_back = (bl + br) / 2;
-        translate(mid_x_back + [0, rod_connection_offset, 0])
+        translate(mid_x_back + [0, 0, -rod_connection_offset])
             xcyl(l = len_x, d = rod_diameter, $fn = 16);
         
         // Left horizontal (along Y) - use ycyl centered between endpoints
         // Apply rod_connection_offset in -X direction
         mid_y_left = (fl + bl) / 2;
         len_y = norm(bl - fl);
-        translate(mid_y_left + [rod_connection_offset, 0, 0])
+        translate(mid_y_left + [0, 0, 0])
             ycyl(l = len_y, d = rod_diameter, $fn = 16);
         
         // Right horizontal (along Y)
         mid_y_right = (fr + br) / 2;
-        translate(mid_y_right + [rod_connection_offset, 0, 0])
+        translate(mid_y_right + [0, 0, 0])
             ycyl(l = len_y, d = rod_diameter, $fn = 16);
     }
 }
