@@ -19,6 +19,12 @@ enable_x_bracing = false;   // Enable X cross-bracing (two diagonals) in each se
 enable_z_bracing = true;  // Enable Z bracing (single diagonal) - mutually exclusive with X bracing
 enable_horizontal = true;  // Enable horizontal rings at each section
 
+// Spotlight configuration
+enable_spotlights = true;  // Enable imported spotlight models
+spotlight_file = "media/spotlight.stl";  // Path to imported 3D model
+spotlight_scale = 1.0;  // Scale factor for spotlight (1 = original size)
+spotlight_rotation = [0, 90, 0];  // Rotation [x, y, z] degrees to orient spotlight
+
 // Per-side bracing control (applies to both X and Z bracing)
 bracing_front = false;   // Front face (y = min)
 bracing_back = true;    // Back face (y = max)
@@ -157,9 +163,20 @@ module horizontal_ring(z_height) {
     }
 }
 
+// Import and place spotlight in center of section
+module spotlight_at(z_center) {
+    if (enable_spotlights) {
+        translate([0, 0, z_center])
+        rotate(spotlight_rotation)
+        scale(spotlight_scale)
+        import(spotlight_file);
+    }
+}
+
 // Create one complete section
 module lamp_section(section_idx) {
     z_base = section_idx * section_height;
+    z_center = z_base + section_height / 2;
     
     // Horizontal rings
     horizontal_ring(z_base);
@@ -170,6 +187,9 @@ module lamp_section(section_idx) {
     } else if (enable_z_bracing) {
         z_bracing(z_base, section_height);
     }
+    
+    // Spotlight in center of section
+    spotlight_at(z_center);
 }
 
 // Create all four vertical corner posts
