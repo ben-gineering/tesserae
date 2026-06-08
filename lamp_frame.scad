@@ -16,7 +16,7 @@ section_height = 25;     // Height of each section in cm (z-axis)
 // Structure parameters
 num_sections = 6;      // Number of vertical sections
 rod_diameter = 2;    // Rod/tube diameter in cm
-corner_offset = 0;     // Offset from corners for aesthetic (0 = centered on corner)
+corner_offset = 2;     // Offset from corners for aesthetic (0 = centered on corner)
 rod_connection_offset = rod_diameter;  // Rod offset for edge alignment: 0=centered, ±(rod_diameter/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
 //   zcyl (vertical): X and Y | xcyl (X-axis): Y only | ycyl (Y-axis): X only
@@ -157,34 +157,31 @@ module horizontal_ring(z_height) {
         br = [x_positions[1], y_positions[1], z_height];  // back-right
         
         // Full-length endpoints (for rod length, ignoring corner_offset)
-        fl_full = [x_full[0], y_positions[0], z_height];
-        fr_full = [x_full[1], y_positions[0], z_height];
-        bl_full = [x_full[0], y_positions[1], z_height];
-        br_full = [x_full[1], y_positions[1], z_height];
+        fl_full = [x_full[0], y_full[0], z_height];
+        fr_full = [x_full[1], y_full[0], z_height];
+        bl_full = [x_full[0], y_full[1], z_height];
+        br_full = [x_full[1], y_full[1], z_height];
         
         // Front horizontal (along X) - use xcyl with full width
         mid_x_front = (fl + fr) / 2;  // Position based on posts
-        len_x_full = norm(fr_full - fl_full);  // Length spans full width
         translate(mid_x_front + [0, 0, -rod_connection_offset])
-            xcyl(l = len_x_full, d = rod_diameter, $fn = 16);
+            xcyl(l = norm(fr_full - fl_full), d = rod_diameter, $fn = 16);
         
         // Back horizontal (along X)
         mid_x_back = (bl + br) / 2;
-        len_x_full = norm(br_full - bl_full);
         translate(mid_x_back + [0, 0, -rod_connection_offset])
-            xcyl(l = len_x_full, d = rod_diameter, $fn = 16);
+            xcyl(l = norm(br_full - bl_full), d = rod_diameter, $fn = 16);
         
         // Left horizontal (along Y) - use ycyl with full depth
-        mid_y_left = (fl + bl) / 2;
-        len_y_full = norm(bl_full - fl_full);
+        // Position at full-width midpoint for proper centering
+        mid_y_left = (fl_full + bl_full) / 2;
         translate(mid_y_left + [0, 0, 0])
-            ycyl(l = len_y_full, d = rod_diameter, $fn = 16);
+            ycyl(l = norm(bl_full - fl_full), d = rod_diameter, $fn = 16);
         
         // Right horizontal (along Y)
-        mid_y_right = (fr + br) / 2;
-        len_y_full = norm(br_full - fr_full);
+        mid_y_right = (fr_full + br_full) / 2;
         translate(mid_y_right + [0, 0, 0])
-            ycyl(l = len_y_full, d = rod_diameter, $fn = 16);
+            ycyl(l = norm(br_full - fr_full), d = rod_diameter, $fn = 16);
     }
 }
 
