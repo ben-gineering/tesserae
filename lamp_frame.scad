@@ -57,6 +57,8 @@ y_positions = [
 
 // Create a rod from point p1 to point p2 using hull
 // Used for diagonal bracing and arbitrary connections
+// Note: hull() of spheres is the most reliable method for connecting
+// arbitrary 3D points with clean manifold geometry
 module rod_between(p1, p2) {
     hull() {
         translate(p1) sphere(d = rod_diameter, $fn = 16);
