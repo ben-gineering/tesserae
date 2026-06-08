@@ -46,7 +46,7 @@ z_bracing_direction = "forward"; // "forward" (/) or "backward" (\) when viewed 
 
 half_rod = rod_diameter / 2;
 
-// Corner positions (adjusted for rod centering)
+// Vertical post positions (adjusted for corner_offset and rod centering)
 x_positions = [
     -section_width/2 + corner_offset + half_rod,
     section_width/2 - corner_offset - half_rod
@@ -55,6 +55,10 @@ y_positions = [
     -section_depth/2 + corner_offset + half_rod,
     section_depth/2 - corner_offset - half_rod
 ];
+
+// Full-width corner positions for horizontal rod lengths (ignores corner_offset)
+x_full = [-section_width/2 + half_rod, section_width/2 - half_rod];
+y_full = [-section_depth/2 + half_rod, section_depth/2 - half_rod];
 
 // ==================== MODULES ====================
 
@@ -146,35 +150,41 @@ module z_bracing(z_base, section_h) {
 // Create horizontal ring at a given height using BOSL2 axis-aligned cylinders
 module horizontal_ring(z_height) {
     if (enable_horizontal) {
-        // Corner positions for rod endpoints
+        // Rod endpoint positions (with corner_offset for post alignment)
         fl = [x_positions[0], y_positions[0], z_height];  // front-left
         fr = [x_positions[1], y_positions[0], z_height];  // front-right
         bl = [x_positions[0], y_positions[1], z_height];  // back-left
         br = [x_positions[1], y_positions[1], z_height];  // back-right
         
-        // Front horizontal (along X) - use xcyl centered between endpoints
-        // Apply rod_connection_offset in -Y direction
-        mid_x_front = (fl + fr) / 2;
-        len_x = norm(fr - fl);
+        // Full-length endpoints (for rod length, ignoring corner_offset)
+        fl_full = [x_full[0], y_positions[0], z_height];
+        fr_full = [x_full[1], y_positions[0], z_height];
+        bl_full = [x_full[0], y_positions[1], z_height];
+        br_full = [x_full[1], y_positions[1], z_height];
+        
+        // Front horizontal (along X) - use xcyl with full width
+        mid_x_front = (fl + fr) / 2;  // Position based on posts
+        len_x_full = norm(fr_full - fl_full);  // Length spans full width
         translate(mid_x_front + [0, 0, -rod_connection_offset])
-            xcyl(l = len_x, d = rod_diameter, $fn = 16);
+            xcyl(l = len_x_full, d = rod_diameter, $fn = 16);
         
         // Back horizontal (along X)
         mid_x_back = (bl + br) / 2;
+        len_x_full = norm(br_full - bl_full);
         translate(mid_x_back + [0, 0, -rod_connection_offset])
-            xcyl(l = len_x, d = rod_diameter, $fn = 16);
+            xcyl(l = len_x_full, d = rod_diameter, $fn = 16);
         
-        // Left horizontal (along Y) - use ycyl centered between endpoints
-        // Apply rod_connection_offset in -X direction
+        // Left horizontal (along Y) - use ycyl with full depth
         mid_y_left = (fl + bl) / 2;
-        len_y = norm(bl - fl);
+        len_y_full = norm(bl_full - fl_full);
         translate(mid_y_left + [0, 0, 0])
-            ycyl(l = len_y, d = rod_diameter, $fn = 16);
+            ycyl(l = len_y_full, d = rod_diameter, $fn = 16);
         
         // Right horizontal (along Y)
         mid_y_right = (fr + br) / 2;
+        len_y_full = norm(br_full - fr_full);
         translate(mid_y_right + [0, 0, 0])
-            ycyl(l = len_y, d = rod_diameter, $fn = 16);
+            ycyl(l = len_y_full, d = rod_diameter, $fn = 16);
     }
 }
 
