@@ -16,7 +16,7 @@ section_height = 25;     // Height of each section in cm (z-axis)
 // Structure parameters
 num_sections = 6;      // Number of vertical sections
 rod_diameter = 2;    // Rod/tube diameter in cm
-corner_offset = 2;     // Offset from corners for aesthetic (0 = centered on corner)
+corner_offset = 5;     // Offset from corners for aesthetic (0 = centered on corner)
 rod_connection_offset = rod_diameter;  // Rod offset for edge alignment: 0=centered, ±(rod_diameter/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
 //   zcyl (vertical): X and Y | xcyl (X-axis): Y only | ycyl (Y-axis): X only
@@ -173,13 +173,14 @@ module horizontal_ring(z_height) {
             xcyl(l = norm(br_full - bl_full), d = rod_diameter, $fn = 16);
         
         // Left horizontal (along Y) - use ycyl with full depth
-        // Position at full-width midpoint for proper centering
-        mid_y_left = (fl_full + bl_full) / 2;
+        // Position Y-midpoint based on posts (respects corner_offset)
+        // But length spans full depth (ignores corner_offset)
+        mid_y_left = [(fl[0] + bl[0])/2, (fl_full[1] + bl_full[1])/2, z_height];
         translate(mid_y_left + [0, 0, 0])
             ycyl(l = norm(bl_full - fl_full), d = rod_diameter, $fn = 16);
         
         // Right horizontal (along Y)
-        mid_y_right = (fr_full + br_full) / 2;
+        mid_y_right = [(fr[0] + br[0])/2, (fr_full[1] + br_full[1])/2, z_height];
         translate(mid_y_right + [0, 0, 0])
             ycyl(l = norm(br_full - fr_full), d = rod_diameter, $fn = 16);
     }
