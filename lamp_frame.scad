@@ -16,14 +16,15 @@ section_height = 25;     // Height of each section in cm (z-axis)
 // Structure parameters
 num_sections = 6;      // Number of vertical sections
 rod_diameter = 2;    // Rod/tube diameter in cm
-corner_offset = 5;     // Offset from corners for aesthetic (0 = centered on corner)
+corner_offset = 2;     // Offset from corners for aesthetic (0 = centered on corner)
 rod_connection_offset = rod_diameter;  // Rod offset for edge alignment: 0=centered, ±(rod_diameter/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
 //   zcyl (vertical): X and Y | xcyl (X-axis): Y only | ycyl (Y-axis): X only
+vertical_post_offset_mode = "topright";  // How vertical posts are offset: "inside", "outside", "topright"
 
 // Bracing pattern
 enable_x_bracing = false;   // Enable X cross-bracing (two diagonals) in each section
-enable_z_bracing = false;  // Enable Z bracing (single diagonal) - mutually exclusive with X bracing
+enable_z_bracing = true;  // Enable Z bracing (single diagonal) - mutually exclusive with X bracing
 enable_horizontal = true;  // Enable horizontal rings at each section
 
 // Spotlight configuration
@@ -36,8 +37,8 @@ spotlight_offset = [4, 19, 3];  // Additional offset from section center
 // Per-side bracing control (applies to both X and Z bracing)
 bracing_front = false;   // Front face (y = min)
 bracing_back = true;    // Back face (y = max)
-bracing_left = true;    // Left face (x = min)
-bracing_right = true;   // Right face (x = max)
+bracing_left = false;    // Left face (x = min)
+bracing_right = false;   // Right face (x = max)
 
 // Z bracing direction (which way the diagonal runs)
 z_bracing_direction = "forward"; // "forward" (/) or "backward" (\) when viewed from outside
@@ -217,15 +218,29 @@ module lamp_section(section_idx) {
     spotlight_at(z_center);
 }
 
+// Determine vertical post offset direction based on mode
+function get_post_offset(px, py) = 
+    vertical_post_offset_mode == "inside" ? [
+        px < 0 ? rod_connection_offset : -rod_connection_offset,
+        py < 0 ? rod_connection_offset : -rod_connection_offset
+    ] :
+    vertical_post_offset_mode == "outside" ? [
+        px < 0 ? -rod_connection_offset : rod_connection_offset,
+        py < 0 ? -rod_connection_offset : rod_connection_offset
+    ] : // topright (default)
+        [rod_connection_offset, rod_connection_offset];
+
 // Create all four vertical corner posts using BOSL2 zcyl
-// Apply rod_connection_offset in -Y direction
+// Vertical posts offset in BOTH X and Y (perpendicular to Z axis)
 module vertical_posts() {
     total_height = num_sections * section_height;
     
-    // Vertical posts offset in BOTH X and Y (perpendicular to Z axis)
-    for (x = x_positions) {
-        for (y = y_positions) {
-            translate([x + rod_connection_offset, y + rod_connection_offset, total_height/2])
+    for (i = [0:1]) {
+        for (j = [0:1]) {
+            px = x_positions[i];
+            py = y_positions[j];
+            offset = get_post_offset(px, py);
+            translate([px + offset[0], py + offset[1], total_height/2])
                 zcyl(h = total_height, d = rod_diameter, $fn = 16);
         }
     }
