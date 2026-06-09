@@ -82,16 +82,14 @@ module diagonal_tube(p1, p2) {
     orient = get_orient(p1, p2);
     
     if (bracing_length > 0 && bracing_length < full_len) {
-        // Fixed length, centered
+        // Fixed length, centered between points
         center = (p1 + p2) / 2;
-        start = center - dir * (bracing_length / 2);
-        end = center + dir * (bracing_length / 2);
-        translate(start)
-            tube(l = bracing_length, od = rod_od, id = rod_id, orient = orient, $fn = 32);
+        translate(center)
+            tube(l = bracing_length, od = rod_od, id = rod_id, orient = orient, anchor = CENTER, $fn = 32);
     } else {
-        // Full length diagonal
+        // Full length diagonal - anchor at BOTTOM to start at p1
         translate(p1)
-            tube(l = full_len, od = rod_od, id = rod_id, orient = orient, $fn = 32);
+            tube(l = full_len, od = rod_od, id = rod_id, orient = orient, anchor = BOTTOM, $fn = 32);
     }
 }
 
@@ -215,7 +213,7 @@ module spotlight_at(z_center) {
         translate(spotlight_offset)
         rotate(spotlight_rotation)
         scale(spotlight_scale)
-        color("#222222")
+        color("#333333")
         import(spotlight_file);
     }
 }
