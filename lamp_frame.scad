@@ -14,13 +14,14 @@ section_depth = 25;      // Depth of each section in cm (y-axis)
 section_height = 25;     // Height of each section in cm (z-axis)
 
 // Structure parameters
-num_sections = 6;      // Number of vertical sections
-rod_diameter = 2;    // Rod/tube diameter in cm
-corner_offset = 2;     // Offset from corners for aesthetic (0 = centered on corner)
-rod_connection_offset = rod_diameter;  // Rod offset for edge alignment: 0=centered, ±(rod_diameter/2)=flush edges
+num_sections = 2;      // Number of vertical sections
+rod_od = 1.72;         // Rod/tube outer diameter in cm
+rod_id = 1.22;         // Rod/tube inner diameter in cm (set to 0 for solid rods)
+corner_offset = 1.5 * rod_od;     // Offset from corners for aesthetic (0 = centered on corner)
+rod_connection_offset = rod_od;  // Rod offset for edge alignment: 0=centered, ±(rod_od/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
 //   zcyl (vertical): X and Y | xcyl (X-axis): Y only | ycyl (Y-axis): X only
-vertical_post_offset_mode = "topright";  // How vertical posts are offset: "inside", "outside", "topright"
+vertical_post_offset_mode = "outside";  // How vertical posts are offset: "inside", "outside", "topright"
 
 // Bracing pattern
 enable_x_bracing = false;   // Enable X cross-bracing (two diagonals) in each section
@@ -37,15 +38,16 @@ spotlight_offset = [4, 19, 3];  // Additional offset from section center
 // Per-side bracing control (applies to both X and Z bracing)
 bracing_front = false;   // Front face (y = min)
 bracing_back = true;    // Back face (y = max)
-bracing_left = false;    // Left face (x = min)
-bracing_right = false;   // Right face (x = max)
+bracing_left = true;    // Left face (x = min)
+bracing_right = true;   // Right face (x = max)
 
 // Z bracing direction (which way the diagonal runs)
 z_bracing_direction = "forward"; // "forward" (/) or "backward" (\) when viewed from outside
 
 // ==================== DERIVED VALUES ====================
 
-half_rod = rod_diameter / 2;
+half_rod = rod_od / 2;
+wall_thickness = (rod_od - rod_id) / 2;
 
 // Vertical post positions (adjusted for corner_offset and rod centering)
 x_positions = [
@@ -67,8 +69,8 @@ y_full = [-section_depth/2 + half_rod, section_depth/2 - half_rod];
 // Works for any orientation (axis-aligned or diagonal)
 module rod_between(p1, p2) {
     hull() {
-        translate(p1) sphere(d = rod_diameter, $fn = 16);
-        translate(p2) sphere(d = rod_diameter, $fn = 16);
+        translate(p1) sphere(d = rod_od, $fn = 16);
+        translate(p2) sphere(d = rod_od, $fn = 16);
     }
 }
 
@@ -166,24 +168,24 @@ module horizontal_ring(z_height) {
         // Front horizontal (along X) - use xcyl with full width
         mid_x_front = (fl + fr) / 2;  // Position based on posts
         translate(mid_x_front + [0, 0, -rod_connection_offset])
-            xcyl(l = norm(fr_full - fl_full), d = rod_diameter, $fn = 16);
+            xcyl(l = norm(fr_full - fl_full), od = rod_od, id = rod_id, $fn = 16);
         
         // Back horizontal (along X)
         mid_x_back = (bl + br) / 2;
         translate(mid_x_back + [0, 0, -rod_connection_offset])
-            xcyl(l = norm(br_full - bl_full), d = rod_diameter, $fn = 16);
+            xcyl(l = norm(br_full - bl_full), od = rod_od, id = rod_id, $fn = 16);
         
         // Left horizontal (along Y) - use ycyl with full depth
         // Position Y-midpoint based on posts (respects corner_offset)
         // But length spans full depth (ignores corner_offset)
         mid_y_left = [(fl[0] + bl[0])/2, (fl_full[1] + bl_full[1])/2, z_height];
         translate(mid_y_left + [0, 0, 0])
-            ycyl(l = norm(bl_full - fl_full), d = rod_diameter, $fn = 16);
+            ycyl(l = norm(bl_full - fl_full), od = rod_od, id = rod_id, $fn = 16);
         
         // Right horizontal (along Y)
         mid_y_right = [(fr[0] + br[0])/2, (fr_full[1] + br_full[1])/2, z_height];
         translate(mid_y_right + [0, 0, 0])
-            ycyl(l = norm(br_full - fr_full), d = rod_diameter, $fn = 16);
+            ycyl(l = norm(br_full - fr_full), od = rod_od, id = rod_id, $fn = 16);
     }
 }
 
@@ -241,7 +243,7 @@ module vertical_posts() {
             py = y_positions[j];
             offset = get_post_offset(px, py);
             translate([px + offset[0], py + offset[1], total_height/2])
-                zcyl(h = total_height, d = rod_diameter, $fn = 16);
+                zcyl(h = total_height, od = rod_od, id = rod_id, $fn = 16);
         }
     }
 }
