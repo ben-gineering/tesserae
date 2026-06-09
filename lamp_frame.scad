@@ -16,7 +16,8 @@ section_height = 25;     // Height of each section in cm (z-axis)
 // Structure parameters
 num_sections = 2;      // Number of vertical sections
 rod_od = 1.72;         // Rod/tube outer diameter in cm
-rod_id = 1.22;         // Rod/tube inner diameter in cm (set to 0 for solid rods)
+rod_id = rod_od - 2*0.235;         // Rod/tube inner diameter in cm (set to 0 for solid rods)
+bracing_length = 0;    // Bracing tube length (0=full diagonal, >0=fixed length centered)
 corner_offset = 1.5 * rod_od;     // Offset from corners for aesthetic (0 = centered on corner)
 rod_connection_offset = rod_od;  // Rod offset for edge alignment: 0=centered, ±(rod_od/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
@@ -65,42 +66,60 @@ y_full = [-section_depth/2 + half_rod, section_depth/2 - half_rod];
 
 // ==================== MODULES ====================
 
-// Create a rod between two points using hull of spheres
-// Works for any orientation (axis-aligned or diagonal)
-module rod_between(p1, p2) {
-    hull() {
-        translate(p1) sphere(d = rod_od, $fn = 16);
-        translate(p2) sphere(d = rod_od, $fn = 16);
+// Helper function to get orientation vector from two points
+function get_orient(p1, p2) = 
+    let(v = p2 - p1)
+    abs(v[0]) > abs(v[1]) && abs(v[0]) > abs(v[2]) ? RIGHT :  // X dominant
+    abs(v[1]) > abs(v[2]) ? BACK :                             // Y dominant
+    UP;                                                        // Z dominant
+
+// Create a diagonal tube between two points
+// If bracing_length > 0, creates a fixed-length tube centered between points
+module diagonal_tube(p1, p2) {
+    v = p2 - p1;
+    full_len = norm(v);
+    dir = v / full_len;
+    orient = get_orient(p1, p2);
+    
+    if (bracing_length > 0 && bracing_length < full_len) {
+        // Fixed length, centered
+        center = (p1 + p2) / 2;
+        start = center - dir * (bracing_length / 2);
+        end = center + dir * (bracing_length / 2);
+        translate(start)
+            tube(l = bracing_length, od = rod_od, id = rod_id, orient = orient, $fn = 32);
+    } else {
+        // Full length diagonal
+        translate(p1)
+            tube(l = full_len, od = rod_od, id = rod_id, orient = orient, $fn = 32);
     }
 }
-
-// Note: diagonal_rod is now rod_between (same functionality)
 
 // Create X bracing for one section
 module x_bracing(z_base, section_h) {
     if (enable_x_bracing) {
         // Front face X (y = y_positions[0])
         if (bracing_front) {
-        rod_between([x_positions[0], y_positions[0], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
-        rod_between([x_positions[1], y_positions[0], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
-    }
-    
-    // Back face X (y = y_positions[1])
-    if (bracing_back) {
-        rod_between([x_positions[0], y_positions[1], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
-        rod_between([x_positions[1], y_positions[1], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
-    }
-    
-    // Left face X (x = x_positions[0])
-    if (bracing_left) {
-        rod_between([x_positions[0], y_positions[0], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
-        rod_between([x_positions[0], y_positions[1], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
-    }
-    
+            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
+            diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
+        }
+        
+        // Back face X (y = y_positions[1])
+        if (bracing_back) {
+            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
+            diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
+        }
+        
+        // Left face X (x = x_positions[0])
+        if (bracing_left) {
+            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
+            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
+        }
+        
         // Right face X (x = x_positions[1])
         if (bracing_right) {
-            rod_between([x_positions[1], y_positions[0], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
-            rod_between([x_positions[1], y_positions[1], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
+            diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
+            diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
         }
     }
 }
@@ -115,36 +134,36 @@ module z_bracing(z_base, section_h) {
     // Front face Z (y = y_positions[0])
     if (bracing_front) {
         if (forward) {
-            rod_between([x_positions[0], y_positions[0], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
+            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
         } else {
-            rod_between([x_positions[1], y_positions[0], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
+            diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
         }
     }
     
     // Back face Z (y = y_positions[1]) - viewed from outside, so direction is reversed
     if (bracing_back) {
         if (forward) {
-            rod_between([x_positions[1], y_positions[1], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
+            diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
         } else {
-            rod_between([x_positions[0], y_positions[1], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
+            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
         }
     }
     
     // Left face Z (x = x_positions[0]) - viewed from outside
     if (bracing_left) {
         if (forward) {
-            rod_between([x_positions[0], y_positions[1], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
+            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
         } else {
-            rod_between([x_positions[0], y_positions[0], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
+            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
         }
     }
     
         // Right face Z (x = x_positions[1]) - viewed from outside
         if (bracing_right) {
             if (forward) {
-                rod_between([x_positions[1], y_positions[0], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
+                diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
             } else {
-                rod_between([x_positions[1], y_positions[1], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
+                diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
             }
         }
     }
