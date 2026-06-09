@@ -14,10 +14,10 @@ section_depth = 25;      // Depth of each section in cm (y-axis)
 section_height = 25;     // Height of each section in cm (z-axis)
 
 // Structure parameters
-num_sections = 2;      // Number of vertical sections
+num_sections = 6;      // Number of vertical sections
 rod_od = 1.72;         // Rod/tube outer diameter in cm
 rod_id = rod_od - 2*0.235;         // Rod/tube inner diameter in cm (set to 0 for solid rods)
-bracing_length = 0;    // Bracing tube length (0=full diagonal, >0=fixed length centered)
+bracing_angle = 45;    // Bracing angle from vertical (degrees). Positive=clockwise when viewed from outside
 corner_offset = 1.5 * rod_od;     // Offset from corners for aesthetic (0 = centered on corner)
 rod_connection_offset = rod_od;  // Rod offset for edge alignment: 0=centered, ±(rod_od/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
@@ -73,96 +73,107 @@ function get_orient(p1, p2) =
     abs(v[1]) > abs(v[2]) ? BACK :                             // Y dominant
     UP;                                                        // Z dominant
 
-// Create a diagonal tube between two points
-// If bracing_length > 0, creates a fixed-length tube centered between points
-module diagonal_tube(p1, p2) {
-    v = p2 - p1;
-    full_len = norm(v);
-    dir = v / full_len;
-    orient = get_orient(p1, p2);
+// Create angled brace on a face
+// start_pos: starting position [x,y,z]
+// width: horizontal width of face
+// height: vertical height of face  
+// angle_deg: angle from vertical (positive=clockwise when viewed from outside)
+// axis: 'RIGHT' for X-axis faces (left/right), 'BACK' for Y-axis faces (front/back)
+module angled_brace(start_pos, width, height, angle_deg, axis) {
+    angle_rad = angle_deg * PI / 180;
     
-    if (bracing_length > 0 && bracing_length < full_len) {
-        // Fixed length, centered between points
-        center = (p1 + p2) / 2;
-        translate(center)
-            tube(l = bracing_length, od = rod_od, id = rod_id, orient = orient, anchor = CENTER, $fn = 32);
+    // Calculate end point based on angle
+    // For clockwise from vertical: moves right (+X or +Y) and up (+Z)
+    vert_dist = height;
+    horiz_dist = height * tan(angle_rad);
+    
+    // Determine direction based on axis
+    if (axis == RIGHT) {
+        // Face is in YZ plane, brace runs along Y+Z
+        end_pos = start_pos + [0, horiz_dist, vert_dist];
     } else {
-        // Full length diagonal - anchor at BOTTOM to start at p1
-        translate(p1)
-            tube(l = full_len, od = rod_od, id = rod_id, orient = orient, anchor = BOTTOM, $fn = 32);
+        // Face is in XZ plane, brace runs along X+Z
+        end_pos = start_pos + [horiz_dist, 0, vert_dist];
     }
+    
+    orient = get_orient(start_pos, end_pos);
+    len = norm(end_pos - start_pos);
+    
+    translate(start_pos)
+        tube(l = len, od = rod_od, id = rod_id, orient = orient, anchor = BOTTOM, $fn = 32);
 }
 
-// Create X bracing for one section
+// Create X bracing for one section (two diagonals per enabled face)
 module x_bracing(z_base, section_h) {
     if (enable_x_bracing) {
-        // Front face X (y = y_positions[0])
+        // Calculate face dimensions
+        face_width_x = x_positions[1] - x_positions[0];  // Width of front/back faces
+        face_width_y = y_positions[1] - y_positions[0];  // Width of left/right faces
+        
+        // Front face X bracing (y = y_positions[0]), viewed from outside (negative Y looking in)
+        // Clockwise: bottom-left to top-right | Counter-clockwise: bottom-right to top-left
         if (bracing_front) {
-            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
-            diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
+            // Clockwise brace: starts at bottom-left corner
+            angled_brace([x_positions[0], y_positions[0], z_base], face_width_x, section_h, bracing_angle, BACK);
+            // Counter-clockwise brace: starts at bottom-right corner, angle is negative
+            angled_brace([x_positions[1], y_positions[0], z_base], face_width_x, section_h, -bracing_angle, BACK);
         }
         
-        // Back face X (y = y_positions[1])
+        // Back face X bracing (y = y_positions[1]), viewed from outside (positive Y looking in)
+        // Clockwise: bottom-left to top-right | Counter-clockwise: bottom-right to top-left
         if (bracing_back) {
-            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
-            diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
+            angled_brace([x_positions[0], y_positions[1], z_base], face_width_x, section_h, bracing_angle, BACK);
+            angled_brace([x_positions[1], y_positions[1], z_base], face_width_x, section_h, -bracing_angle, BACK);
         }
         
-        // Left face X (x = x_positions[0])
+        // Left face X bracing (x = x_positions[0]), viewed from outside (negative X looking in)
+        // Clockwise: bottom-back to top-front | Counter-clockwise: bottom-front to top-back
         if (bracing_left) {
-            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
-            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
+            angled_brace([x_positions[0], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
+            angled_brace([x_positions[0], y_positions[1], z_base], face_width_y, section_h, -bracing_angle, RIGHT);
         }
         
-        // Right face X (x = x_positions[1])
+        // Right face X bracing (x = x_positions[1]), viewed from outside (positive X looking in)
+        // Clockwise: bottom-front to top-back | Counter-clockwise: bottom-back to top-front
         if (bracing_right) {
-            diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
-            diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
+            angled_brace([x_positions[1], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
+            angled_brace([x_positions[1], y_positions[1], z_base], face_width_y, section_h, -bracing_angle, RIGHT);
         }
     }
 }
 
 // Create Z bracing for one section (single diagonal per side)
+// Create Z bracing for one section (single diagonal per enabled face)
+// Uses bracing_angle parameter, always clockwise when viewed from outside
 module z_bracing(z_base, section_h) {
     if (enable_z_bracing) {
     
-    // Determine diagonal direction
-    forward = (z_bracing_direction == "forward");
+    // Calculate face dimensions
+    face_width_x = x_positions[1] - x_positions[0];  // Width of front/back faces
+    face_width_y = y_positions[1] - y_positions[0];  // Width of left/right faces
     
-    // Front face Z (y = y_positions[0])
+    // Front face Z (y = y_positions[0]), viewed from outside (negative Y looking in)
+    // Clockwise: bottom-left to top-right
     if (bracing_front) {
-        if (forward) {
-            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
-        } else {
-            diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
-        }
+        angled_brace([x_positions[0], y_positions[0], z_base], face_width_x, section_h, bracing_angle, BACK);
     }
     
-    // Back face Z (y = y_positions[1]) - viewed from outside, so direction is reversed
+    // Back face Z (y = y_positions[1]), viewed from outside (positive Y looking in)
+    // Clockwise: bottom-left to top-right (from back perspective)
     if (bracing_back) {
-        if (forward) {
-            diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
-        } else {
-            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
-        }
+        angled_brace([x_positions[0], y_positions[1], z_base], face_width_x, section_h, bracing_angle, BACK);
     }
     
-    // Left face Z (x = x_positions[0]) - viewed from outside
+    // Left face Z (x = x_positions[0]), viewed from outside (negative X looking in)
+    // Clockwise: bottom-back to top-front
     if (bracing_left) {
-        if (forward) {
-            diagonal_tube([x_positions[0], y_positions[1], z_base], [x_positions[0], y_positions[0], z_base + section_h]);
-        } else {
-            diagonal_tube([x_positions[0], y_positions[0], z_base], [x_positions[0], y_positions[1], z_base + section_h]);
-        }
+        angled_brace([x_positions[0], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
     }
     
-        // Right face Z (x = x_positions[1]) - viewed from outside
+        // Right face Z (x = x_positions[1]), viewed from outside (positive X looking in)
+        // Clockwise: bottom-front to top-back
         if (bracing_right) {
-            if (forward) {
-                diagonal_tube([x_positions[1], y_positions[0], z_base], [x_positions[1], y_positions[1], z_base + section_h]);
-            } else {
-                diagonal_tube([x_positions[1], y_positions[1], z_base], [x_positions[1], y_positions[0], z_base + section_h]);
-            }
+            angled_brace([x_positions[1], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
         }
     }
 }
