@@ -72,34 +72,54 @@ Added flexible bracing configuration:
   - Original: `HEKTAR Wand-Klemmspot - dunkelgrau (80215308)-mini.glb` (237 KB)
   - Exported: `media/spotlight.stl` (10.5 MB ASCII, 16,658 vertices)
   - Dimensions: ~10.8 × 22 × 31 cm (real-world scale)
+- Added spotlight configuration parameters and `spotlight_at(z_center)` module
+- Places one spotlight per section at vertical center with configurable scale/rotation/offset
 
-- Added spotlight configuration parameters:
-  - `enable_spotlights`: Toggle on/off
-  - `spotlight_scale`: Size adjustment factor
-  - `spotlight_rotation`: [x, y, z] rotation in degrees
-  - `spotlight_offset`: Additional position offset
+#### Phase 7: Geometry Refactor & BOSL2 Integration
+- Renamed frame dimensions to per-section dimensions:
+  - `frame_width` → `section_width`
+  - `frame_depth` → `section_depth`
+  - `frame_height` replaced by `section_height * num_sections`
+- Integrated BOSL2 primitives
+- Replaced axis-aligned cylinders with BOSL2-based geometry for posts and rings
+- Kept diagonal/bracing logic separate for iterative experimentation
 
-- Implemented `spotlight_at(z_center)` module:
-  - Places one instance per section at vertical center
-  - Applies rotation and scaling
-  - Uses OpenSCAD `import()` for STL loading
+#### Phase 8: Tube-Based Structure and Offset Controls
+- Replaced `rod_diameter` with:
+  - `rod_od` (outer diameter)
+  - `rod_id` (inner diameter, `0` for solid rods)
+- Switched structural members to BOSL2 `tube()` for hollow tube modeling
+- Added `vertical_post_offset_mode`:
+  - `"inside"`
+  - `"outside"`
+  - `"topright"`
+- Changed `corner_offset` behavior:
+  - Vertical posts move inward/outward as configured
+  - Horizontal rings keep full span to preserve overlap for real connectors
+- Horizontal ring placement updated so `xcyl` and `ycyl` both respond correctly to offsets
 
-**Render Notes**:
-- Spotlight visible in OpenSCAD GUI preview and render
-- CLI PNG renders may require colorscheme adjustments for visibility
-- Model is non-manifold (not watertight) but imports correctly
+#### Phase 9: Bracing Simplification
+- Removed endpoint-driven `rod_between()` / `diagonal_tube()` approach
+- Added `bracing_angle` parameter to describe braces relative to vertical
+- Implemented angle-driven braces using BOSL2 `tube()`:
+  - `enable_z_bracing`: one clockwise brace per enabled face
+  - `enable_x_bracing`: one clockwise and one counter-clockwise brace per enabled face
+- Fixed OpenSCAD scoping issue in `angled_brace()` by replacing block-local assignment with ternary assignment
+- Verified CLI renders from isometric and all orthographic axes
 
 ---
 
 ## Current Status
 
 ✅ **Complete**:
-- Parametric frame model with adjustable dimensions
-- Full bracing configuration options (X/Z patterns, per-side control)
-- Clean geometry verified across multiple views
-- Manifold solid suitable for 3D printing/fabrication
-- Imported spotlight model placement in each section
-- Documentation complete
+- Parametric multi-section frame model with section-based dimensions
+- Hollow or solid tube modeling via `rod_od` / `rod_id`
+- Horizontal ring overlap behavior for connector approximation
+- Vertical post offset modes and ring/post offset controls
+- Angle-driven X/Z bracing per enabled face
+- Imported spotlight placement in each section
+- BOSL2-based tube geometry throughout primary structure
+- Documentation updated for current parameter set
 
 ⏳ **Future Enhancements**:
 - [ ] Custom spotlight mount/connectors for physical fabrication
@@ -116,24 +136,27 @@ Added flexible bracing configuration:
 
 ### OpenSCAD Version
 - Developed with OpenSCAD v2026.05.31
-- Uses `hull()` + `sphere()` technique for clean rod connections
-- All modules use proper scoping (no global `return` statements)
+- Uses BOSL2 `tube()` for hollow structural members
+- Angle-driven brace placement uses standard OpenSCAD vector math
 
 ### Key Design Decisions
 
-1. **Rod Connection Method**: `rod_between(p1, p2)` with `hull()` ensures manifold geometry and precise endpoint connections
+1. **Tube Modeling**: BOSL2 `tube()` provides cleaner hollow-member geometry than custom boolean wrappers
 
-2. **Parameter Organization**: All user-adjustable values grouped at top of file for easy modification
+2. **Connector Approximation**: `corner_offset` now moves posts without shortening horizontal members, preserving overlap for real connectors
 
-3. **Modular Architecture**: Separate modules for posts, rings, and bracing enable independent testing
+3. **Bracing Strategy**: Braces are controlled by angle relative to vertical rather than exact endpoint targeting, matching pre-cut tube fabrication better
 
-4. **Scale**: 1 unit = 1 cm (real-world dimensions)
+4. **Parameter Organization**: All user-adjustable values grouped at top of file for easy modification
+
+5. **Scale**: 1 unit = 1 cm (real-world dimensions)
 
 ### Known Limitations
 
 - No connector/joint modeling (frame-only design)
-- No lamp fixtures or spotlight mounts
-- Flat bottom cut optional (commented out in code)
+- No lamp fixtures or spotlight mounts beyond imported spotlight bodies
+- Bracing is angle-driven and not trimmed to exact joints
+- Overlapping members can produce non-manifold-looking intersections in some backends, though preview/render works correctly for current workflow
 - Requires external fabrication knowledge for real-world build
 
 ---
@@ -161,4 +184,4 @@ openscad -o lamp_custom.png --projection=p --viewall --render \
 
 ---
 
-*Last updated: 2026-06-08*
+*Last updated: 2026-06-09*

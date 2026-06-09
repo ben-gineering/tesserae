@@ -18,6 +18,7 @@ num_sections = 6;      // Number of vertical sections
 rod_od = 1.72;         // Rod/tube outer diameter in cm
 rod_id = rod_od - 2*0.235;         // Rod/tube inner diameter in cm (set to 0 for solid rods)
 bracing_angle = 45;    // Bracing angle from vertical (degrees). Positive=clockwise when viewed from outside
+bracing_length = 25;    // Fixed brace length in cm. 0 = auto-fit to face height/angle
 corner_offset = 1.5 * rod_od;     // Offset from corners for aesthetic (0 = centered on corner)
 rod_connection_offset = rod_od;  // Rod offset for edge alignment: 0=centered, ±(rod_od/2)=flush edges
 // Each rod offset in axes perpendicular to its own axis:
@@ -66,39 +67,31 @@ y_full = [-section_depth/2 + half_rod, section_depth/2 - half_rod];
 
 // ==================== MODULES ====================
 
-// Helper function to get orientation vector from two points
-function get_orient(p1, p2) = 
-    let(v = p2 - p1)
-    abs(v[0]) > abs(v[1]) && abs(v[0]) > abs(v[2]) ? RIGHT :  // X dominant
-    abs(v[1]) > abs(v[2]) ? BACK :                             // Y dominant
-    UP;                                                        // Z dominant
+// Create tube between two arbitrary 3D points
+module brace_between(p1, p2, length_override = 0) {
+    v = p2 - p1;
+    full_len = norm(v);
+    len = length_override > 0 ? min(length_override, full_len) : full_len;
+    start = length_override > 0 ? p1 + (v/full_len) * ((full_len - len)/2) : p1;
+
+    translate(start)
+        rot(from=UP, to=v)
+            tube(h = len, od = rod_od, id = rod_id, anchor = BOTTOM, $fn = 32);
+}
 
 // Create angled brace on a face
-// start_pos: starting position [x,y,z]
-// width: horizontal width of face
-// height: vertical height of face  
+// center_pos: brace center on the face
+// face_span: horizontal span available in face plane
+// height: vertical height of face
 // angle_deg: angle from vertical (positive=clockwise when viewed from outside)
-// axis: 'RIGHT' for X-axis faces (left/right), 'BACK' for Y-axis faces (front/back)
-module angled_brace(start_pos, width, height, angle_deg, axis) {
-    angle_rad = angle_deg * PI / 180;
-    
-    // Calculate end point based on angle
-    // For clockwise from vertical: moves right (+X or +Y) and up (+Z)
-    vert_dist = height;
-    horiz_dist = height * tan(angle_rad);
-    
-    // Determine direction based on axis
-    end_pos = axis == RIGHT ? 
-        // Face is in YZ plane, brace runs along Y+Z
-        start_pos + [0, horiz_dist, vert_dist] :
-        // Face is in XZ plane, brace runs along X+Z
-        start_pos + [horiz_dist, 0, vert_dist];
-    
-    orient = get_orient(start_pos, end_pos);
-    len = norm(end_pos - start_pos);
-    
-    translate(start_pos)
-        tube(l = len, od = rod_od, id = rod_id, orient = orient, anchor = BOTTOM, $fn = 32);
+// axis: BACK for XZ faces, RIGHT for YZ faces
+module angled_brace(center_pos, face_span, height, angle_deg, axis) {
+    auto_len = min(height / cos(angle_deg), face_span / max(0.001, abs(sin(angle_deg))));
+    len = bracing_length > 0 ? bracing_length : auto_len;
+    half_vert = (len * cos(angle_deg)) / 2;
+    half_horiz = (len * sin(angle_deg)) / 2;
+    delta = axis == RIGHT ? [0, half_horiz, half_vert] : [half_horiz, 0, half_vert];
+    brace_between(center_pos - delta, center_pos + delta, 0);
 }
 
 // Create X bracing for one section (two diagonals per enabled face)
@@ -108,34 +101,32 @@ module x_bracing(z_base, section_h) {
         face_width_x = x_positions[1] - x_positions[0];  // Width of front/back faces
         face_width_y = y_positions[1] - y_positions[0];  // Width of left/right faces
         
-        // Front face X bracing (y = y_positions[0]), viewed from outside (negative Y looking in)
-        // Clockwise: bottom-left to top-right | Counter-clockwise: bottom-right to top-left
+        // Front face X bracing (XZ plane at y=min)
         if (bracing_front) {
-            // Clockwise brace: starts at bottom-left corner
-            angled_brace([x_positions[0], y_positions[0], z_base], face_width_x, section_h, bracing_angle, BACK);
-            // Counter-clockwise brace: starts at bottom-right corner, angle is negative
-            angled_brace([x_positions[1], y_positions[0], z_base], face_width_x, section_h, -bracing_angle, BACK);
+            face_center = [0, y_positions[0], z_base + section_h/2];
+            angled_brace(face_center, face_width_x, section_h, bracing_angle, BACK);
+            angled_brace(face_center, face_width_x, section_h, -bracing_angle, BACK);
         }
         
-        // Back face X bracing (y = y_positions[1]), viewed from outside (positive Y looking in)
-        // Clockwise: bottom-left to top-right | Counter-clockwise: bottom-right to top-left
+        // Back face X bracing (XZ plane at y=max)
         if (bracing_back) {
-            angled_brace([x_positions[0], y_positions[1], z_base], face_width_x, section_h, bracing_angle, BACK);
-            angled_brace([x_positions[1], y_positions[1], z_base], face_width_x, section_h, -bracing_angle, BACK);
+            face_center = [0, y_positions[1], z_base + section_h/2];
+            angled_brace(face_center, face_width_x, section_h, bracing_angle, BACK);
+            angled_brace(face_center, face_width_x, section_h, -bracing_angle, BACK);
         }
         
-        // Left face X bracing (x = x_positions[0]), viewed from outside (negative X looking in)
-        // Clockwise: bottom-back to top-front | Counter-clockwise: bottom-front to top-back
+        // Left face X bracing (YZ plane at x=min)
         if (bracing_left) {
-            angled_brace([x_positions[0], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
-            angled_brace([x_positions[0], y_positions[1], z_base], face_width_y, section_h, -bracing_angle, RIGHT);
+            face_center = [x_positions[0], 0, z_base + section_h/2];
+            angled_brace(face_center, face_width_y, section_h, bracing_angle, RIGHT);
+            angled_brace(face_center, face_width_y, section_h, -bracing_angle, RIGHT);
         }
         
-        // Right face X bracing (x = x_positions[1]), viewed from outside (positive X looking in)
-        // Clockwise: bottom-front to top-back | Counter-clockwise: bottom-back to top-front
+        // Right face X bracing (YZ plane at x=max)
         if (bracing_right) {
-            angled_brace([x_positions[1], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
-            angled_brace([x_positions[1], y_positions[1], z_base], face_width_y, section_h, -bracing_angle, RIGHT);
+            face_center = [x_positions[1], 0, z_base + section_h/2];
+            angled_brace(face_center, face_width_y, section_h, bracing_angle, RIGHT);
+            angled_brace(face_center, face_width_y, section_h, -bracing_angle, RIGHT);
         }
     }
 }
@@ -150,29 +141,25 @@ module z_bracing(z_base, section_h) {
     face_width_x = x_positions[1] - x_positions[0];  // Width of front/back faces
     face_width_y = y_positions[1] - y_positions[0];  // Width of left/right faces
     
-    // Front face Z (y = y_positions[0]), viewed from outside (negative Y looking in)
-    // Clockwise: bottom-left to top-right
+    // Front face Z (XZ plane at y=min)
     if (bracing_front) {
-        angled_brace([x_positions[0], y_positions[0], z_base], face_width_x, section_h, bracing_angle, BACK);
+        angled_brace([0, y_positions[0], z_base + section_h/2], face_width_x, section_h, bracing_angle, BACK);
     }
     
-    // Back face Z (y = y_positions[1]), viewed from outside (positive Y looking in)
-    // Clockwise: bottom-left to top-right (from back perspective)
+    // Back face Z (XZ plane at y=max)
     if (bracing_back) {
-        angled_brace([x_positions[0], y_positions[1], z_base], face_width_x, section_h, bracing_angle, BACK);
+        angled_brace([0, y_positions[1], z_base + section_h/2], face_width_x, section_h, bracing_angle, BACK);
     }
     
-    // Left face Z (x = x_positions[0]), viewed from outside (negative X looking in)
-    // Clockwise: bottom-back to top-front
+    // Left face Z (YZ plane at x=min)
     if (bracing_left) {
-        angled_brace([x_positions[0], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
+        angled_brace([x_positions[0], 0, z_base + section_h/2], face_width_y, section_h, bracing_angle, RIGHT);
     }
     
-        // Right face Z (x = x_positions[1]), viewed from outside (positive X looking in)
-        // Clockwise: bottom-front to top-back
-        if (bracing_right) {
-            angled_brace([x_positions[1], y_positions[0], z_base], face_width_y, section_h, bracing_angle, RIGHT);
-        }
+    // Right face Z (YZ plane at x=max)
+    if (bracing_right) {
+        angled_brace([x_positions[1], 0, z_base + section_h/2], face_width_y, section_h, bracing_angle, RIGHT);
+    }
     }
 }
 
