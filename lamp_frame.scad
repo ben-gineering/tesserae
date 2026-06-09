@@ -65,6 +65,42 @@ y_full = [-section_depth/2 + half_rod, section_depth/2 - half_rod];
 
 // ==================== MODULES ====================
 
+// Hollow cylinder wrapper for zcyl
+module hollow_zcyl(h, od, id) {
+    if (id > 0) {
+        difference() {
+            zcyl(h=h, d=od, $fn=32);
+            translate([0,0,-0.05]) zcyl(h=h+0.1, d=id, $fn=32);
+        }
+    } else {
+        zcyl(h=h, d=od, $fn=32);
+    }
+}
+
+// Hollow cylinder wrapper for xcyl
+module hollow_xcyl(l, od, id) {
+    if (id > 0) {
+        difference() {
+            xcyl(l=l, d=od, $fn=32);
+            translate([-0.05,0,0]) xcyl(l=l+0.1, d=id, $fn=32);
+        }
+    } else {
+        xcyl(l=l, d=od, $fn=32);
+    }
+}
+
+// Hollow cylinder wrapper for ycyl
+module hollow_ycyl(l, od, id) {
+    if (id > 0) {
+        difference() {
+            ycyl(l=l, d=od, $fn=32);
+            translate([0,-0.05,0]) ycyl(l=l+0.1, d=id, $fn=32);
+        }
+    } else {
+        ycyl(l=l, d=od, $fn=32);
+    }
+}
+
 // Create a rod between two points using hull of spheres
 // Works for any orientation (axis-aligned or diagonal)
 module rod_between(p1, p2) {
@@ -168,24 +204,24 @@ module horizontal_ring(z_height) {
         // Front horizontal (along X) - use xcyl with full width
         mid_x_front = (fl + fr) / 2;  // Position based on posts
         translate(mid_x_front + [0, 0, -rod_connection_offset])
-            xcyl(l = norm(fr_full - fl_full), od = rod_od, id = rod_id, $fn = 16);
+            hollow_xcyl(l = norm(fr_full - fl_full), od = rod_od, id = rod_id);
         
         // Back horizontal (along X)
         mid_x_back = (bl + br) / 2;
         translate(mid_x_back + [0, 0, -rod_connection_offset])
-            xcyl(l = norm(br_full - bl_full), od = rod_od, id = rod_id, $fn = 16);
+            hollow_xcyl(l = norm(br_full - bl_full), od = rod_od, id = rod_id);
         
         // Left horizontal (along Y) - use ycyl with full depth
         // Position Y-midpoint based on posts (respects corner_offset)
         // But length spans full depth (ignores corner_offset)
         mid_y_left = [(fl[0] + bl[0])/2, (fl_full[1] + bl_full[1])/2, z_height];
         translate(mid_y_left + [0, 0, 0])
-            ycyl(l = norm(bl_full - fl_full), od = rod_od, id = rod_id, $fn = 16);
+            hollow_ycyl(l = norm(bl_full - fl_full), od = rod_od, id = rod_id);
         
         // Right horizontal (along Y)
         mid_y_right = [(fr[0] + br[0])/2, (fr_full[1] + br_full[1])/2, z_height];
         translate(mid_y_right + [0, 0, 0])
-            ycyl(l = norm(br_full - fr_full), od = rod_od, id = rod_id, $fn = 16);
+            hollow_ycyl(l = norm(br_full - fr_full), od = rod_od, id = rod_id);
     }
 }
 
@@ -243,7 +279,7 @@ module vertical_posts() {
             py = y_positions[j];
             offset = get_post_offset(px, py);
             translate([px + offset[0], py + offset[1], total_height/2])
-                zcyl(h = total_height, od = rod_od, id = rod_id, $fn = 16);
+                hollow_zcyl(h = total_height, od = rod_od, id = rod_id);
         }
     }
 }
