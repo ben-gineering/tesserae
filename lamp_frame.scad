@@ -88,13 +88,11 @@ module angled_brace(start_pos, width, height, angle_deg, axis) {
     horiz_dist = height * tan(angle_rad);
     
     // Determine direction based on axis
-    if (axis == RIGHT) {
+    end_pos = axis == RIGHT ? 
         // Face is in YZ plane, brace runs along Y+Z
-        end_pos = start_pos + [0, horiz_dist, vert_dist];
-    } else {
+        start_pos + [0, horiz_dist, vert_dist] :
         // Face is in XZ plane, brace runs along X+Z
-        end_pos = start_pos + [horiz_dist, 0, vert_dist];
-    }
+        start_pos + [horiz_dist, 0, vert_dist];
     
     orient = get_orient(start_pos, end_pos);
     len = norm(end_pos - start_pos);
