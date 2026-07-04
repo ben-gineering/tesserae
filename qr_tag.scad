@@ -19,7 +19,7 @@ qr_raise = 1.0;   // enough for a clean filament-swap top layer
 qr_margin = 0;
 
 // Hole
-hole_diameter = 4;
+hole_diameter = 5;
 hole_offset_y = 10;
 
 // Border around QR area (mm)
