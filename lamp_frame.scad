@@ -27,7 +27,7 @@ vertical_post_offset_mode = "outside";  // How vertical posts are offset: "insid
 
 // Bracing pattern
 enable_x_bracing = false;   // Enable X cross-bracing (two diagonals) in each section
-enable_z_bracing = true;  // Enable Z bracing (single diagonal) - mutually exclusive with X bracing
+enable_z_bracing = false;  // Enable Z bracing (single diagonal) - mutually exclusive with X bracing
 enable_horizontal = true;  // Enable horizontal rings at each section
 
 // Spotlight configuration
