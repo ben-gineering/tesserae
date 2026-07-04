@@ -15,7 +15,7 @@ section_height = 25;     // Height of each section in cm (z-axis)
 
 // Structure parameters
 num_sections = 6;      // Number of vertical sections
-rod_od = 1.72;         // Rod/tube outer diameter in cm
+rod_od = 1;         // Rod/tube outer diameter in cm
 rod_id = rod_od - 2*0.235;         // Rod/tube inner diameter in cm (set to 0 for solid rods)
 bracing_angle = 45;    // Bracing angle from vertical (degrees). Positive=clockwise when viewed from outside
 bracing_length = 25;    // Fixed brace length in cm. 0 = auto-fit to face height/angle
